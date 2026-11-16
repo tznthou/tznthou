@@ -29,7 +29,10 @@ W = 846  # GitHub profile README 內容寬（2026-09-25 實測）
 # ── 資料與校驗 ─────────────────────────────────────
 raw = json.loads(DATA.read_text(encoding="utf-8"))
 DAYS = {dt.date.fromisoformat(d): n for d, n in raw["days"]}
-TODAY = dt.date.fromisoformat(raw["fetched_at"][:10])
+# 「今天」跟 fetch_days.py 一樣用台灣時間（UTC+8、無日光節約）；用 UTC 日期的話，
+# 台灣凌晨觸發時當天的貢獻會落在 N_WEEKS 之外
+TODAY = dt.datetime.fromisoformat(raw["fetched_at"]).astimezone(
+    dt.timezone(dt.timedelta(hours=8))).date()
 ORDER = sorted(DAYS)
 FIRST, SECOND = ORDER[0], ORDER[1]
 TOTAL = sum(DAYS.values())
