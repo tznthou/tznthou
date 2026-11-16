@@ -1,0 +1,48 @@
+name: Update contribution timeline
+
+on:
+  schedule:
+    # 7th of every month, 03:17 UTC (11:17 Taipei); off the hour to avoid queue spikes
+    - cron: "17 3 7 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: timeline
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+
+      - name: Install font tooling
+        run: pip install -r timeline/requirements.txt
+
+      - name: Fetch contributions
+        run: python timeline/fetch_days.py
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Generate SVGs
+        run: python timeline/gen_timeline.py
+
+      - name: Commit if changed
+        run: |
+          if git diff --quiet -- assets/timeline-light.svg assets/timeline-dark.svg; then
+            echo "Timeline unchanged; nothing to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/timeline-light.svg assets/timeline-dark.svg
+          git commit -m "chore: update contribution timeline"
+          git push
